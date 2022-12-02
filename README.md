@@ -8,3 +8,16 @@ Many games utilize API calls to local graphics libraries such as OpenGL (https:/
 We are currently deciding which game would be best to target. However, here are a few choices we have come up with: Counter-Strike: Global Offensive, Doom (2016 or earlier), Star Wars: Republic Commando, Quake 4, etc. After this, we will begin reverse engineering which we anticipate will take one week (optimistically). Finally, we will write the exploit code which we anticipate will take one to two weeks. Both of us plan to work on each part together---an equal division of labor on each task. The final deliverable will be (in-part) a video of us playing the game against each other (on LAN), exhibiting our modifications to the game.
 
 If we notice that we are running out of time and will not be able to implement the specific hacks mentioned above, we can opt for something simpler such as using our hooking mechanism to display things in the scene (such as a box around the sight reticle, etc.) so we still have a visually cool demo at the end.
+
+
+# Notes
+
+- [?] `CBaseEntity` is responsible for managing the data of player objects.
+- [?] `client_panorama_client.so` is the shared object that manages players in game.
+- Start on command line: `steam steam://rungameid/730`
+- Been using `frida-trace` to trace program and search for calls to OpenGL libraries (looked for calls having *gl* in the name, thus far we have only found a few)
+- Lots of calls to `libcairo_client.so` -- we looked this up and it turns out libcairo (cairographics.org) is a graphics library which provides high-level wrappers around lower-level APIs (e.g. OpenGL). We got its source code and figured out it makes call to OpenGL APIs but for some reason they are not visible in the trace.
+
+- Found player (not enemy) position by finding health and calculating the offset to the position
+- Found enemy position by walking up to enemy and having enemy move and searching for range of position values
+

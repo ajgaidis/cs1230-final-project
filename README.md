@@ -35,3 +35,15 @@ There are two options:
   - Figure out what library calls write to / read from this memory addresses. This should hopefully give us the function that reads this data and renders it, and another higher-level function that calls the rendering function if the enemy is visible.
   - Figure out a way to always call the rendering function regardless of whether the enemy should be rendered or not. Alternatively, insert an extra function call to our own rendering function.
   - If that doesn't work, try to figure out a way to write in memory such that the enemy models are always visible.
+
+
+# More notes
+
+- Using Ghidra (static analysis)
+    - Find string `"EntityGlowEffects"`
+    - Find references to the aforementioned string to uncover `CGlowObjectManager::RenderGlowEffects()`
+    - According the the System V AMD64 ABI, in C++ `this` is an implicit first parameter. Thus, we find references (calls) to `RenderGlowEffects()` to uncover `DoPostScreenSpaceEffects()` and look for the first argument to `RenderGlowEffects()`.
+    - This reveals the first argument is the result of the function call `GlowObjectManager()` which has a static pointer to `CGlowObjectManager` at offset `0x2c9bf80` (the `.bss` section in `client_client.so`).
+
+
+- NOTE: the addresses in ghidra seem to be 0x100000 off...? ---> yes this seems to be true...

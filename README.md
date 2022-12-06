@@ -47,3 +47,25 @@ There are two options:
 
 
 - NOTE: the addresses in ghidra seem to be 0x100000 off...? ---> yes this seems to be true...
+
+# Turn on glow
+
+- Find GlowObjectDefinition_t struct of player in memory (dereference s_GlowObjectManager, iterate through m_GlowObjectDefinitions -> currently manually cross-checking which object in list corresponds to the player by locating player entity in memory using PINCE and locating their health field -- need to find a way to get the right object in list automatically).
+- Change GlowObjectDefinition_t fields:
+```
+GlowObjectDefinition
+    0x00 - 0x04 = m_nNextFreeSlot
+    0x08 - 0x10 = m_pEntity
+    0x10 - 0x14 = m_vGlowColorX -> Need to set to 1.0
+    0x14 - 0x18 = m_vGlowColorY
+    0x18 - 0x1c = m_vGlowColorZ
+    0x1c - 0x20 = m_vGlowAlpha -> Need to set to 1.0
+    0x20 - 0x24 = m_bGlowAlphaCappedByRenderAlpha + padding??
+    0x24 - 0x28 = m_flGlowAlphaFunctionOfMaxVelocity
+    0x28 - 0x2c = m_flGlowAlphaMax -> Need to set to 1.0
+    0x2c - 0x30 = m_flGlowPulseOverdrive
+    0x30 - 0x31 = m_renderWhenOccluded -> Need to set to 1
+    0x31 - 0x32 = m_renderWhenUnoccluded
+    0x38 - 0x3c = m_nRenderStyle
+    0x3c - 0x40 = m_nSplitScreenSlot
+```

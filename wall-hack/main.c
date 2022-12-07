@@ -22,14 +22,17 @@
 #define INSN_OFFSET         0x7f1463
 #define INSN_OPERAND_OFFSET 0x2
 
+#define esym  "[!]"
+#define vsym  "[+]"
+
 #define handle_error_en(en, msg) \
-  do { errno = en; perror(msg); exit(EXIT_FAILURE); } while (0)
+  do { errno = (en); perror(esym (msg)); exit(EXIT_FAILURE); } while (0)
 
 #define handle_error(msg) \
-  do { perror(msg); exit(EXIT_FAILURE); } while (0)
+  do { perror(esym (msg)); exit(EXIT_FAILURE); } while (0)
 
 #ifdef VERBOSE
-  #define verbose(fmt, ...) printf((fmt), ##__VA_ARGS__);
+  #define verbose(fmt, ...) printf(vsym (fmt), ##__VA_ARGS__);
 #else
   #define verbose(fmt, ...)
 #endif
@@ -92,7 +95,7 @@ int main(void)
 
   /* get process pid */
   pid = get_pid();
-  verbose("[+] %s pid: %jd\n", PROG_NAME, (intmax_t)pid);
+  verbose("%s pid: %jd\n", PROG_NAME, (intmax_t)pid);
 
   /* change working directory to make accessing files easy */
   if (snprintf(path, PATH_LEN, "/proc/%.10jd", (intmax_t)pid) < 0)
@@ -100,30 +103,30 @@ int main(void)
 
   if (chdir(path) == -1)
     handle_error("chdir");
-  verbose("[+] cwd changed: %s\n", path);
+  verbose("cwd changed: %s\n", path);
 
   /* get base address of loaded library */
   base_addr = get_base_addr();
-  verbose("[+] %s base address: %" PRIxPTR "\n", LIB_NAME, base_addr);
+  verbose("%s base address: %" PRIxPTR "\n", LIB_NAME, base_addr);
 
   /* get instruction address to patch */
   offset_addr = base_addr + INSN_OFFSET + INSN_OPERAND_OFFSET;
-  verbose("[+] instruction address: %" PRIxPTR "\n", offset_addr);
+  verbose("instruction address: %" PRIxPTR "\n", offset_addr);
 
   /* open /proc/<pid>/mem to access process' memory */
   if ((mem_fd = open("mem", O_LARGEFILE | O_WRONLY)) == -1)
     handle_error("open");
-  verbose("[+] opened file: %s/mem\n", path);
+  verbose("opened file: %s/mem\n", path);
 
   /* seek to byte we want to overwrite */
   if (lseek64(mem_fd, (off64_t)offset_addr, SEEK_SET) == -1)
     handle_error("lseek64");
-  verbose("[+] moved file offset: 0x0 -> %" PRIxPTR "\n", offset_addr);
+  verbose("moved file offset: 0x0 -> %" PRIxPTR "\n", offset_addr);
 
   /* overwrite the byte to enable wall hacks */
   if (write(mem_fd, "\x01", 1) == -1)
     handle_error("write");
-  verbose("[+] pwned! wrote 0x01 at %" PRIxPTR "\n", offset_addr);
+  verbose("pwned! wrote 0x01 at %" PRIxPTR "\n", offset_addr);
 
   /* cleanup */
   if (close(mem_fd) == -1)

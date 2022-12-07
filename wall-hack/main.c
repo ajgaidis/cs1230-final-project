@@ -28,6 +28,12 @@
 #define handle_error(msg) \
   do { perror(msg); exit(EXIT_FAILURE); } while (0)
 
+#ifdef VERBOSE
+  #define verbose(fmt, ...) printf((fmt), ##__VA_ARGS__);
+#else
+  #define verbose(fmt, ...)
+#endif
+
 
 pid_t get_pid(void)
 {
@@ -86,10 +92,7 @@ int main(void)
 
   /* get process pid */
   pid = get_pid();
-
-#ifdef VERBOSE
-  printf("[+] %s pid: %jd\n", PROG_NAME, (intmax_t)pid);
-#endif
+  verbose("[+] %s pid: %jd\n", PROG_NAME, (intmax_t)pid);
 
   /* change working directory to make accessing files easy */
   if (snprintf(path, PATH_LEN, "/proc/%.10jd", (intmax_t)pid) < 0)
@@ -97,45 +100,30 @@ int main(void)
 
   if (chdir(path) == -1)
     handle_error("chdir");
-
-#ifdef VERBOSE
-  printf("[+] cwd changed: %s\n", path);
-#endif
+  verbose("[+] cwd changed: %s\n", path);
 
   /* get base address of loaded library */
   base_addr = get_base_addr();
+  verbose("[+] %s base address: %" PRIxPTR "\n", LIB_NAME, base_addr);
 
   /* get instruction address to patch */
   offset_addr = base_addr + INSN_OFFSET + INSN_OPERAND_OFFSET;
-
-#ifdef VERBOSE
-  printf("[+] %s base address: %" PRIxPTR "\n", LIB_NAME, base_addr);
-  printf("[+] instruction address: %" PRIxPTR "\n", offset_addr);
-#endif
+  verbose("[+] instruction address: %" PRIxPTR "\n", offset_addr);
 
   /* open /proc/<pid>/mem to access process' memory */
   if ((mem_fd = open("mem", O_LARGEFILE | O_WRONLY)) == -1)
     handle_error("open");
-
-#ifdef VERBOSE
-  printf("[+] opened file: %s/mem\n", path);
-#endif
+  verbose("[+] opened file: %s/mem\n", path);
 
   /* seek to byte we want to overwrite */
   if (lseek64(mem_fd, (off64_t)offset_addr, SEEK_SET) == -1)
     handle_error("lseek64");
-
-#ifdef VERBOSE
-  printf("[+] moved file offset: 0x0 -> %" PRIxPTR "\n", offset_addr);
-#endif
+  verbose("[+] moved file offset: 0x0 -> %" PRIxPTR "\n", offset_addr);
 
   /* overwrite the byte to enable wall hacks */
   if (write(mem_fd, "\x01", 1) == -1)
     handle_error("write");
-
-#ifdef VERBOSE
-  printf("[+] pwned! wrote 0x01 at %" PRIxPTR "\n", offset_addr);
-#endif
+  verbose("[+] pwned! wrote 0x01 at %" PRIxPTR "\n", offset_addr);
 
   /* cleanup */
   if (close(mem_fd) == -1)

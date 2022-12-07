@@ -52,20 +52,44 @@ struct GlowObjectDefinition_t
 
 int read_from_proc(pid_t pid, uintptr_t addr_to_read, void *buffer, size_t len)
 {
-    struct iovec local[1] = {};
-    struct iovec remote[1] = {};
+    struct iovec local = {};
+    struct iovec remote = {};
     int errsv = 0;
     ssize_t nread = 0;
 
-    local[0].iov_len = len;
-    local[0].iov_base = buffer;
+    local.iov_len = len;
+    local.iov_base = buffer;
 
-    remote[0].iov_base = (void *) addr_to_read;
-    remote[0].iov_len = local[0].iov_len;
+    remote.iov_base = (void *) addr_to_read;
+    remote.iov_len = local.iov_len;
 
-    nread = process_vm_readv(pid, local, 2, remote, 1, 0);
+    nread = process_vm_readv(pid, &local, 1, &remote, 1, NULL);
 
-    if (nread != local[0].iov_len)
+    if (nread != local.iov_len)
+    {
+        handle_error("process_vm_readv");
+        return EXIT_FAILURE;
+    }
+
+    return EXIT_SUCCESS;
+}
+
+int write_to_proc(pid_t pid, uintptr_t addr_to_write, void *buffer, size_t len)
+{
+    struct iovec local = {};
+    struct iovec remote = {};
+    int errsv = 0;
+    ssize_t nread = 0;
+
+    local.iov_len = len;
+    local.iov_base = buffer;
+
+    remote.iov_base = (void *) addr_to_write;
+    remote.iov_len = local.iov_len;
+
+    nread = process_vm_writev(pid, &local, 1, &remote, 1, 0);
+
+    if (nread != local.iov_len)
     {
         handle_error("process_vm_readv");
         return EXIT_FAILURE;
@@ -189,10 +213,24 @@ int main(void)
   printf("GlowObjectDefinisions list located at %#lx\n", m_GlowObjectDefinitions);
 
   struct GlowObjectDefinition_t glow_obj_def;
+  uintptr_t target_glow_obj_addr = m_GlowObjectDefinitions + (5 * 64);
   memset((void *)&glow_obj_def, 0, GLOWOBJDEF_SIZE);
-  read_from_proc(pid, m_GlowObjectDefinitions, &glow_obj_def, GLOWOBJDEF_SIZE);
+  read_from_proc(pid, target_glow_obj_addr, &glow_obj_def, GLOWOBJDEF_SIZE);
   print_hex_buf((unsigned char *)&glow_obj_def, GLOWOBJDEF_SIZE);
   print_glow_obj_def(&glow_obj_def);
+
+  glow_obj_def.m_vGlowColorX = 1.0f;
+  glow_obj_def.m_vGlowAlpha = 1.0f;
+  glow_obj_def.m_flGlowAlphaMax = 1.0f;
+  glow_obj_def.m_renderWhenOccluded = 1;
+
+  printf("===========================\n");
+  print_hex_buf((unsigned char *)&glow_obj_def, GLOWOBJDEF_SIZE);
+  print_glow_obj_def(&glow_obj_def);
+  while(1) {
+      write_to_proc(pid, target_glow_obj_addr, &glow_obj_def, GLOWOBJDEF_SIZE);
+  }
+
   /* /1* get instruction address to patch *1/ */
   /* offset_addr = base_addr + INSN_OFFSET + INSN_OPERAND_OFFSET; */
 

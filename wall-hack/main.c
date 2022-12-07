@@ -26,13 +26,13 @@
 #define vsym  "[+]"
 
 #define handle_error_en(en, msg) \
-  do { errno = (en); perror(esym (msg)); exit(EXIT_FAILURE); } while (0)
+  do { errno = (en); perror(esym msg); exit(EXIT_FAILURE); } while (0)
 
 #define handle_error(msg) \
-  do { perror(esym (msg)); exit(EXIT_FAILURE); } while (0)
+  do { perror(esym msg); exit(EXIT_FAILURE); } while (0)
 
 #ifdef VERBOSE
-  #define verbose(fmt, ...) printf(vsym (fmt), ##__VA_ARGS__);
+  #define verbose(fmt, ...) printf(vsym fmt, ##__VA_ARGS__);
 #else
   #define verbose(fmt, ...)
 #endif

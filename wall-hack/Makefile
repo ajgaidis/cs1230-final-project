@@ -5,14 +5,15 @@ CFLAGS	:= $(DBG) $(OPT) -fPIC $(if $(v),-DVERBOSE=1,)
 LDFLAGS	:= -pie
 
 SRC	:= main.c
+HDR	:= colorio.h
 BIN	:= $(basename $(SRC))
 
 .PHONY: help all clean
 
 all: $(BIN)
 
-$(BIN): $(SRC)
-	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
+$(BIN): $(SRC) $(HDR)
+	$(CC) $(CFLAGS) $< -o $@ $(LDFLAGS)
 
 help:
 	@echo "Run 'make v=1' to build a verbose version of the binary."

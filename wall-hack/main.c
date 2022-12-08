@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include "colorio.h"
 
 
 #define PROG_NAME "csgo_linux64"
@@ -21,21 +22,6 @@
 
 #define INSN_OFFSET         0x7f1463
 #define INSN_OPERAND_OFFSET 0x2
-
-#define esym  "[!]"
-#define vsym  "[+]"
-
-#define handle_error_en(en, msg) \
-  do { errno = (en); perror(esym msg); exit(EXIT_FAILURE); } while (0)
-
-#define handle_error(msg) \
-  do { perror(esym msg); exit(EXIT_FAILURE); } while (0)
-
-#ifdef VERBOSE
-  #define verbose(fmt, ...) printf(vsym fmt, ##__VA_ARGS__);
-#else
-  #define verbose(fmt, ...)
-#endif
 
 
 pid_t get_pid(void)

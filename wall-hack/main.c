@@ -1,10 +1,11 @@
 #include <errno.h>
 #include <limits.h>
+#include <pthread.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <string.h>
+#include <unistd.h>
 #include <sys/types.h>
 #include <sys/uio.h>
 
@@ -37,7 +38,9 @@
 
 /* Entity field offsets */
 #define ENT_HEALTH_OFFSET       0x138
-#define ENT_TEAM_OFFSET       0x12c
+#define ENT_TEAM_OFFSET         0x12c
+#define TEAM_TERRORISTS         2
+#define TEAM_CT                 3
 
 #define handle_error_en(en, msg) \
     do { errno = en; perror(msg); exit(EXIT_FAILURE); } while (0)
@@ -45,6 +48,7 @@
 #define handle_error(msg) \
     do { perror(msg); exit(EXIT_FAILURE); } while (0)
 
+pthread_attr_t detached_attr;
 
 struct GlowObjectDefinition_t
 {
@@ -74,6 +78,14 @@ struct Entity
 
     list_link_t entity_link;
 };
+
+struct hacked_glow_obj
+{
+    uintptr_t glow_obj_addr;
+    struct GlowObjectDefinition_t glow_obj_def;
+    struct Entity *entity;
+};
+
 
 pid_t csgo_pid;
 uintptr_t client_lib_addr;
@@ -290,23 +302,49 @@ void get_global_addresses(void)
     get_entities();
 }
 
-int is_glow_entry_for_entity(struct GlowObjectDefinition_t *glow_obj)
+struct Entity *get_entity_for_glow_entry(struct GlowObjectDefinition_t *glow_obj)
 {
     struct Entity *entity;
     list_iterate_begin(&entities, entity, struct Entity, entity_link) {
 
         if (entity->base == glow_obj->m_pEntity) {
-            return 1;
+            return entity;
         }
 
     } list_iterate_end();
 
-    return 0;
+    return NULL;
+}
+
+void *write_glow_obj(void *data)
+{
+
+    struct hacked_glow_obj *hacked_obj = (struct hacked_glow_obj *) data;
+    if (hacked_obj->entity->team == TEAM_CT) {
+        hacked_obj->glow_obj_def.m_vGlowColorZ = 1.0f;
+    } else if (hacked_obj->entity->team == TEAM_CT) {
+        hacked_obj->glow_obj_def.m_vGlowColorX = 1.0f;
+    }
+    hacked_obj->glow_obj_def.m_vGlowAlpha = 1.0f;
+    hacked_obj->glow_obj_def.m_flGlowAlphaMax = 1.0f;
+    hacked_obj->glow_obj_def.m_renderWhenOccluded = 1;
+
+    puts("Modified glow object:\n");
+    print_hex_buf((unsigned char *)&hacked_obj->glow_obj_def, GLOWOBJDEF_SIZE);
+    print_glow_obj_def(&hacked_obj->glow_obj_def);
+    while(1) {
+        write_to_proc(hacked_obj->glow_obj_addr, &hacked_obj->glow_obj_def, GLOWOBJDEF_SIZE);
+    }
+
+    pthread_exit(NULL);
 }
 
 void apply_glows(void)
 {
     struct GlowObjectDefinition_t glow_obj_def;
+    struct hacked_glow_obj *hacked_obj;
+    pthread_t thread;
+    struct Entity *entity = NULL;
 
     int nextFreeSlot = GLOW_ENTRY_IN_USE;
     uintptr_t cur_glow_entry = m_GlowObjectDefinitions;
@@ -316,33 +354,25 @@ void apply_glows(void)
         read_from_proc(cur_glow_entry, &glow_obj_def, GLOWOBJDEF_SIZE);
         nextFreeSlot = glow_obj_def.m_nNextFreeSlot;
 
-        if (nextFreeSlot == GLOW_ENTRY_IN_USE &&
-                is_glow_entry_for_entity(&glow_obj_def)) {
+        entity = get_entity_for_glow_entry(&glow_obj_def);
+        if (nextFreeSlot == GLOW_ENTRY_IN_USE && entity) {
             puts("Found glow entry for entity:");
             /* print_hex_buf((unsigned char *)&glow_obj_def, GLOWOBJDEF_SIZE); */
             print_glow_obj_def(&glow_obj_def);
+            // TODO cleanup
+            hacked_obj = malloc(sizeof(struct hacked_glow_obj));
+            memset(hacked_obj, 0, sizeof(struct hacked_glow_obj));
+            hacked_obj->glow_obj_addr = cur_glow_entry;
+            memcpy((void *) &hacked_obj->glow_obj_def, &glow_obj_def, sizeof(struct GlowObjectDefinition_t));
+            hacked_obj->entity = entity;
+            pthread_create(&thread, &detached_attr, &write_glow_obj, hacked_obj);
         }
 
         cur_glow_entry += GLOW_ENTRY_SIZE;
     }
 
-    /* puts("Initial glow object:"); */
-    /* print_hex_buf((unsigned char *)&glow_obj_def, GLOWOBJDEF_SIZE); */
-    /* print_glow_obj_def(&glow_obj_def); */
-
-    /* glow_obj_def.m_vGlowColorX = 1.0f; */
-    /* glow_obj_def.m_vGlowAlpha = 1.0f; */
-    /* glow_obj_def.m_flGlowAlphaMax = 1.0f; */
-    /* glow_obj_def.m_renderWhenOccluded = 1; */
-
-    /* puts("===========================\n"); */
-
-    /* puts("Modified glow object:\n"); */
-    /* print_hex_buf((unsigned char *)&glow_obj_def, GLOWOBJDEF_SIZE); */
-    /* print_glow_obj_def(&glow_obj_def); */
-    /* while(1) { */
-    /*     write_to_proc(target_glow_obj_addr, &glow_obj_def, GLOWOBJDEF_SIZE); */
-    /* } */
+    //TODO integrate interface
+    while (1);
 }
 
 int main(void)
@@ -350,8 +380,10 @@ int main(void)
     char path[PATH_LEN];
 
     list_init(&entities);
+    pthread_attr_init(&detached_attr);
+    pthread_attr_setdetachstate(&detached_attr, PTHREAD_CREATE_DETACHED);
 
-    /* get process csgo_pid */
+    /* get pid of csgo process */
     csgo_pid = get_csgo_pid();
     printf("Got %s csgo_pid: %d\n", PROG_NAME, csgo_pid);
 

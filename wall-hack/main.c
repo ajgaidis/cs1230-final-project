@@ -318,8 +318,11 @@ struct Entity *get_entity_for_glow_entry(struct GlowObjectDefinition_t *glow_obj
 
 void *write_glow_obj(void *data)
 {
-
     struct hacked_glow_obj *hacked_obj = (struct hacked_glow_obj *) data;
+    uintptr_t cur_entity_addr;
+    unsigned char buf[PTRSIZE + 1];
+    memset(buf, 0, PTRSIZE + 1);
+
     if (hacked_obj->entity->team == TEAM_CT) {
         hacked_obj->glow_obj_def.m_vGlowColorZ = 1.0f;
     } else if (hacked_obj->entity->team == TEAM_CT) {
@@ -328,12 +331,20 @@ void *write_glow_obj(void *data)
     hacked_obj->glow_obj_def.m_vGlowAlpha = 1.0f;
     hacked_obj->glow_obj_def.m_flGlowAlphaMax = 1.0f;
     hacked_obj->glow_obj_def.m_renderWhenOccluded = 1;
+    /* hacked_obj->glow_obj_def.m_renderWhenUnoccluded = 1; */
 
     puts("Modified glow object:\n");
-    print_hex_buf((unsigned char *)&hacked_obj->glow_obj_def, GLOWOBJDEF_SIZE);
+    /* print_hex_buf((unsigned char *)&hacked_obj->glow_obj_def, GLOWOBJDEF_SIZE); */
     print_glow_obj_def(&hacked_obj->glow_obj_def);
-    while(1) {
+
+    read_from_proc(hacked_obj->glow_obj_addr + sizeof(int), buf, PTRSIZE);
+    cur_entity_addr = unpack(buf, PTRSIZE);
+
+    /* printf("%#lx %#lx\n", cur_entity_addr, hacked_obj->entity->base); */
+    while(cur_entity_addr == hacked_obj->entity->base) {
         write_to_proc(hacked_obj->glow_obj_addr, &hacked_obj->glow_obj_def, GLOWOBJDEF_SIZE);
+        read_from_proc(hacked_obj->glow_obj_addr + sizeof(int), buf, PTRSIZE);
+        cur_entity_addr = unpack(buf, PTRSIZE);
     }
 
     pthread_exit(NULL);

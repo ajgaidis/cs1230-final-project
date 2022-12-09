@@ -44,8 +44,8 @@
   GET_COLOR_FMT(_0, ##__VA_ARGS__, FMT3, FMT2, FMT1, FMT0)(fmt, __VA_ARGS__)
 
 
-#define esym  COLOR_FMT("[!]", BRIGHT, FG_RED)
-#define vsym  COLOR_FMT("[+]", BRIGHT, FG_GREEN)
+#define esym  COLOR_FMT("[!] ", BRIGHT, FG_RED)
+#define vsym  COLOR_FMT("[+] ", BRIGHT, FG_GREEN)
 
 #define handle_error_en(en, msg) do { \
   errno = (en); \

@@ -46,6 +46,7 @@
 
 #define esym  COLOR_FMT("[!] ", BRIGHT, FG_RED)
 #define vsym  COLOR_FMT("[+] ", BRIGHT, FG_GREEN)
+#define isym  COLOR_FMT("[i] ", BRIGHT, FG_BLUE)
 
 #define handle_error_en(en, msg) do { \
   errno = (en); \
@@ -61,7 +62,10 @@
 #ifdef VERBOSE
   #define verbose(fmt, ...) \
     printf(vsym COLOR_FMT(fmt, FG_GREEN), ##__VA_ARGS__)
+  #define info(fmt, ...) \
+    printf(vsym COLOR_FMT(fmt, FG_BLUE), ##__VA_ARGS__)
 #else
   #define verbose(fmt, ...)
+  #define info(fmt, ...)
 #endif
 

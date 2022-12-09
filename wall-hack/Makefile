@@ -5,7 +5,7 @@ CFLAGS	:= $(DBG) $(OPT) -fPIC $(if $(v),-DVERBOSE=1,)
 LDFLAGS	:= -pie
 
 SRC	:= main.c
-HDR	:= colorio.h
+HDR	:= colorio.h list.h
 BIN	:= $(basename $(SRC))
 
 .PHONY: help all clean

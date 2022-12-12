@@ -1,3 +1,6 @@
+#ifndef __COLORIO_H__
+#define __COLORIO_H__
+
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -43,10 +46,9 @@
 #define COLOR_FMT(fmt, ...) \
   GET_COLOR_FMT(_0, ##__VA_ARGS__, FMT3, FMT2, FMT1, FMT0)(fmt, __VA_ARGS__)
 
-
 #define esym  COLOR_FMT("[!] ", BRIGHT, FG_RED)
 #define vsym  COLOR_FMT("[+] ", BRIGHT, FG_GREEN)
-#define isym  COLOR_FMT("[i] ", BRIGHT, FG_BLUE)
+#define isym  COLOR_FMT("[i] ", BRIGHT, FG_MAGENTA)
 
 #define handle_error_en(en, msg) do { \
   errno = (en); \
@@ -59,13 +61,19 @@
   exit(EXIT_FAILURE); \
 } while (0)
 
+#define warn(fmt, ...) \
+  printf(esym COLOR_FMT(fmt, FG_RED), ##__VA_ARGS__)
+#define cli(fmt, ...) \
+  printf(COLOR_FMT(fmt, FG_BLUE), ##__VA_ARGS__)
+
 #ifdef VERBOSE
   #define verbose(fmt, ...) \
     printf(vsym COLOR_FMT(fmt, FG_GREEN), ##__VA_ARGS__)
-  #define info(fmt, ...) \
-    printf(vsym COLOR_FMT(fmt, FG_BLUE), ##__VA_ARGS__)
+  #define dbg(fmt, ...) \
+    printf(isym COLOR_FMT(fmt, FG_MAGENTA), ##__VA_ARGS__)
 #else
   #define verbose(fmt, ...)
-  #define info(fmt, ...)
+  #define dbg(fmt, ...)
 #endif
 
+#endif /* __COLOIO_H__ */

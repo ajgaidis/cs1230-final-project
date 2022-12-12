@@ -2,7 +2,7 @@ CC			:= gcc
 DBG			:= -g -Wall -Werror
 OPT			:= -O2
 CFLAGS	:= $(DBG) $(OPT) -fPIC $(if $(v),-DVERBOSE=1,)
-LDFLAGS	:= -pie
+LDFLAGS	:= -pie -lpthread -lreadline
 
 SRC	:= main.c
 HDR	:= colorio.h list.h

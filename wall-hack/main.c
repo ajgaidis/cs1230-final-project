@@ -42,6 +42,7 @@
 #define GLOWOBJDEF_SIZE         64
 #define ENTITY_LIST_ITEM_SIZE   32
 #define ENTITY_OFFSET           16
+#define MAX_HP                  100.f
 
 /* glow entry info */
 #define GLOW_ENTRY_SIZE         64
@@ -313,16 +314,13 @@ void disable_glows(void)
 void *write_glow_obj(void *data)
 {
     uintptr_t cur_entity_addr;
+    float perc_hp;
     unsigned char buf[PTR_SIZE + 1];
     memset(buf, 0, PTR_SIZE + 1);
     struct hacked_glow_obj *hacked_obj = (struct hacked_glow_obj *) data;
 
     pthread_cleanup_push(cleanup_glows, data);
 
-    if (hacked_obj->entity->team == TEAM_CT)
-        hacked_obj->glow_obj_def.m_vGlowColorZ = 1.0f;
-    else if (hacked_obj->entity->team == TEAM_CT)
-        hacked_obj->glow_obj_def.m_vGlowColorX = 1.0f;
     hacked_obj->glow_obj_def.m_vGlowAlpha = 1.0f;
     hacked_obj->glow_obj_def.m_flGlowAlphaMax = 1.0f;
     hacked_obj->glow_obj_def.m_renderWhenOccluded = 1;
@@ -335,11 +333,25 @@ void *write_glow_obj(void *data)
     cur_entity_addr = unpack(buf, PTR_SIZE);
 
     while(cur_entity_addr == hacked_obj->entity->base) {
+
+        perc_hp = hacked_obj->entity->health / MAX_HP;
+        /* printf("%f\n", perc_hp); */
+
+        if (hacked_obj->entity->team == TEAM_CT)
+            hacked_obj->glow_obj_def.m_vGlowColorY = perc_hp;
+        else if (hacked_obj->entity->team == TEAM_TERRORISTS)
+            hacked_obj->glow_obj_def.m_vGlowColorZ = perc_hp;
+        hacked_obj->glow_obj_def.m_vGlowColorX = 1.f - perc_hp;
+
         write_to_proc(hacked_obj->glow_obj_addr,
                 &hacked_obj->glow_obj_def, GLOWOBJDEF_SIZE);
         read_from_proc(hacked_obj->glow_obj_addr + sizeof(int), buf, PTR_SIZE);
-
         cur_entity_addr = unpack(buf, PTR_SIZE);
+
+        /* Update health */
+        memset(buf, 0, PTR_SIZE);
+        read_from_proc(hacked_obj->entity->base + ENT_HEALTH_OFFSET, buf, sizeof(int));
+        hacked_obj->entity->health = unpack(buf, sizeof(int));
     }
 
     pthread_cleanup_pop(1);
@@ -363,10 +375,11 @@ void enable_glows(void)
     struct hacked_glow_obj *hacked_obj;
     struct Entity *entity = NULL;
     int nextFreeSlot = GLOW_ENTRY_IN_USE;
-    uintptr_t cur_glow_entry = m_GlowObjectDefinitions;
+    uintptr_t cur_glow_entry;
 
     set_glow_info();
     set_entities();
+    cur_glow_entry = m_GlowObjectDefinitions;
 
     while (nextFreeSlot == GLOW_ENTRY_IN_USE) {
         read_from_proc(cur_glow_entry, &glow_obj_def, GLOWOBJDEF_SIZE);
@@ -374,7 +387,7 @@ void enable_glows(void)
 
         entity = get_glow_entry_entity(&glow_obj_def);
         if (nextFreeSlot == GLOW_ENTRY_IN_USE && entity) {
-            dbg("found glow entry for entity:");
+            dbg("found glow entry for entity:\n");
             print_glow_obj_def(&glow_obj_def);
 
             hacked_obj = malloc(sizeof(struct hacked_glow_obj));

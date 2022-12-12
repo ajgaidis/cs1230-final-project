@@ -53,7 +53,7 @@
 #define TEAM_TERRORISTS         2
 #define TEAM_CT                 3
 
-struct GlowObjectDefinition_t 
+struct GlowObjectDefinition_t
 {
     int m_nNextFreeSlot;
     uintptr_t m_pEntity;
@@ -342,8 +342,20 @@ void *write_glow_obj(void *data)
         cur_entity_addr = unpack(buf, PTR_SIZE);
     }
 
+    pthread_cleanup_pop(1);
     pthread_exit(NULL);
 }
+
+void set_glow_info(void)
+{
+  s_GlowObjectManager = client_client_base_addr + GLOWOBJMGR_OFFSET;
+  verbose("s_GlowObjectManager address: 0x%" PRIxPTR "\n", s_GlowObjectManager);
+
+  m_GlowObjectDefinitions = get_glowobj_def_list(s_GlowObjectManager);
+  verbose("GlowObjectDefinitions list address: 0x%" PRIxPTR "\n",
+          m_GlowObjectDefinitions);
+}
+
 
 void enable_glows(void)
 {
@@ -468,16 +480,6 @@ void set_client_client_base_addr(void)
 
   verbose("%s base address: 0x%" PRIxPTR "\n", LIB_NAME,
           client_client_base_addr);
-}
-
-void set_glow_info(void)
-{
-  s_GlowObjectManager = client_client_base_addr + GLOWOBJMGR_OFFSET;
-  verbose("s_GlowObjectManager address: 0x%" PRIxPTR "\n", s_GlowObjectManager);
-
-  m_GlowObjectDefinitions = get_glowobj_def_list(s_GlowObjectManager);
-  verbose("GlowObjectDefinitions list address: 0x%" PRIxPTR "\n",
-          m_GlowObjectDefinitions);
 }
 
 static void help_cmd(const char *line)

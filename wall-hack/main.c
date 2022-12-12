@@ -497,7 +497,7 @@ static void glow_cmd(const char *line)
         return;
     }
 
-    if (enable_glow != 0 || enable_glow != 1) {
+    if (enable_glow != 0 && enable_glow != 1) {
         warn(CLI_GLOW_SYNTAX_ERROR_MSG);
         return;
     }
@@ -517,7 +517,7 @@ static void wireframe_cmd(const char *line)
         return;
     }
 
-    if (enable_wireframe != 0 || enable_wireframe != 1) {
+    if (enable_wireframe != 0 && enable_wireframe != 1) {
         warn(CLI_WIREFRAME_SYNTAX_ERROR_MSG);
         return;
     }

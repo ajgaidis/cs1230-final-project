@@ -55,6 +55,7 @@
 #define DRAW_NENEMIES_OFFSET       0x4114
 #define DRAW_ENEMIES_HPS_OFFSET    0x40e0
 #define DRAW_HP_ENABLED            0x411c
+#define MAX_PLAYERS                20
 
 /* glow entry info */
 #define GLOW_ENTRY_SIZE         64
@@ -130,6 +131,7 @@ list_t entities;
 "| q                          Exit the program                          |\n" \
 "| glow <0 | 1>               Disable/enable glow wall-hacks            |\n" \
 "| wireframe <0 | 1>          Disable/enable wireframe wall-hacks       |\n" \
+"| healthbars <0 | 1>         Disable/enable healthbars                 |\n" \
 "+----------------------------------------------------------------------+\n\n"
 #define CLI_WIREFRAME_SYNTAX_ERROR_MSG  "invalid command syntax (pass 0 or 1)"
 #define CLI_GLOW_SYNTAX_ERROR_MSG  "invalid command syntax (pass 0 or 1)"
@@ -272,6 +274,17 @@ int get_entity_int_field(struct Entity *entity, int offset)
     return unpack(buf, sizeof(int));
 }
 
+void cleanup_entities()
+{
+
+    struct Entity *entity;
+
+    while (!list_empty(&entities)) {
+        entity = list_head(&entities, struct Entity, entity_link);
+        free(entity);
+    }
+}
+
 void set_entities(void)
 {
     uintptr_t cur_entity_entry;
@@ -279,8 +292,7 @@ void set_entities(void)
     struct Entity *entity;
     uintptr_t entity_ptr = -1;
 
-    /* init entity list */
-    list_init(&entities);
+    cleanup_entities();
 
     read_from_proc(client_client_base_addr + LOCAL_PLAYER_PTR_OFFSET, buf, PTR_SIZE);
     local_player_addr = unpack(buf, PTR_SIZE);
@@ -289,7 +301,8 @@ void set_entities(void)
     cur_entity_entry = client_client_base_addr + ENTITYLIST_OFFSET;
     verbose("entity list address: 0x%" PRIxPTR "\n", cur_entity_entry);
 
-    while (entity_ptr) {
+    for (int i  = 0; i <  MAX_PLAYERS; i++) {
+    /* while (entity_ptr) { */
         read_from_proc(cur_entity_entry + ENTITY_OFFSET, buf, PTR_SIZE);
         entity_ptr = unpack(buf, sizeof(uintptr_t));
 
@@ -681,6 +694,9 @@ int main(int argc, char *argv[])
     rl_bind_key('\t', rl_complete);
     char cmd[LINE_MAX];
     int num_cmds, ret, i;
+
+    /* init entity list */
+    list_init(&entities);
 
     /* set global values */
     set_csgo_pid();

@@ -54,6 +54,7 @@
 #define DRAW_TEAMMATES_HPS_OFFSET  0x4100
 #define DRAW_NENEMIES_OFFSET       0x4114
 #define DRAW_ENEMIES_HPS_OFFSET    0x40e0
+#define DRAW_HP_ENABLED            0x411c
 
 /* glow entry info */
 #define GLOW_ENTRY_SIZE         64
@@ -484,15 +485,20 @@ void *write_healthbars(void *data)
 
 void enable_healthbars(void)
 {
+    uintptr_t hp_enabled_ptr = draw_base_addr + DRAW_HP_ENABLED;
+    int one = 1;
+    write_to_proc(hp_enabled_ptr, &one, sizeof(int));
     pthread_create(&hp_thread, NULL, &write_healthbars, NULL);
     pthread_detach(hp_thread);
 }
 
 void disable_healthbars(void)
 {
+    uintptr_t hp_enabled_ptr = draw_base_addr + DRAW_HP_ENABLED;
     uintptr_t num_teammates_addr = draw_base_addr + DRAW_NTEAMMATES_OFFSET;
     uintptr_t num_enemies_addr = draw_base_addr + DRAW_NENEMIES_OFFSET;
     int zero = 0;
+    write_to_proc(hp_enabled_ptr, &zero, sizeof(int));
     write_to_proc(num_teammates_addr, &zero, sizeof(int));
     write_to_proc(num_enemies_addr, &zero, sizeof(int));
     pthread_cancel(hp_thread);

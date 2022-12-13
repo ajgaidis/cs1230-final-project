@@ -10,6 +10,7 @@
 #define HEALTHBAR_HEIGHT  10.f
 #define HEALTHBAR_PADDING 10.f
 
+int hp_enabled = 0;
 int numAllies = 0;
 int numEnemies = 0;
 int allyHPs[5];
@@ -126,6 +127,10 @@ void glXSwapBuffers(Display *dpy, GLXDrawable drawable)
   float x, y;
   int i;
 
+  if (!hp_enabled) {
+    goto hooked_fn;
+  }
+
   /* get initial x, y values */
   x = GL::viewport[2] - HEALTHBAR_WIDTH - HEALTHBAR_PADDING;
   y = 150.f;
@@ -153,6 +158,7 @@ void glXSwapBuffers(Display *dpy, GLXDrawable drawable)
   /* restore saved GL state */
   GL::restoreGL();
 
+hooked_fn:
   /* call the hooked function */
   fptr = (glXSwapBuffersPtr)dlsym(RTLD_NEXT, "glXSwapBuffers");
   return fptr(dpy, drawable);

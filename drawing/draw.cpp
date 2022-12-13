@@ -1,26 +1,33 @@
 #include "draw.h"
 
 #define MAX_HP  100.f
+#define MIN_HP  0.f
 
-int num_players = 2;
-char player_hps[32] = {75, 33};
+#define HIGH_HEALTH_MARK 80.f
+#define LOW_HEALTH_MARK  40.f
+
+#define HEALTHBAR_WIDTH   75.f
+#define HEALTHBAR_HEIGHT  10.f
+#define HEALTHBAR_PADDING 10.f
+
+int numPlayersPerTeam = 5;
+float allyHPs[5]  = {75.f, 33.f, 81.f, 5.f, 100.f};
+float enemyHPs[5] = {75.f, 33.f, 81.f, 5.f, 100.f};
 
 void GL::setupOrtho(void)
 {
-  GLint viewport[4];
-
   /* save current state */
   glPushAttrib(GL_ALL_ATTRIB_BITS);
   glPushMatrix();
 
   /* get the viewport info */
-  glGetIntegerv(GL_VIEWPORT, viewport);
+  glGetIntegerv(GL_VIEWPORT, GL::viewport);
 
   /* set the viewport */
   glViewport(/* x */ 0,
              /* y */ 0,
-             /* width */ viewport[2],
-             /* height */ viewport[3]);
+             /* width */ GL::viewport[2],
+             /* height */ GL::viewport[3]);
 
   /* make future matrix operations apply to projection matrix stack */
   glMatrixMode(GL_PROJECTION);
@@ -30,8 +37,8 @@ void GL::setupOrtho(void)
 
   /* define the frustum */
   glOrtho(/* left */ 0,
-          /* right */ viewport[2],
-          /* top */ viewport[3],
+          /* right */ GL::viewport[2],
+          /* top */ GL::viewport[3],
           /* bottom */ 0,
           /* near */ -1,
           /* far */ 1);
@@ -52,44 +59,61 @@ void GL::restoreGL(void) { /* restore the state */
   glEnable(GL_DEPTH_TEST);
 }
 
-void GL::drawRect(float x, float y, float width, float height, int hp)
+void GL::drawHealthBar(float x, float y, float width, float height,
+                        float hp, bool isAlly)
 {
-  float full_bar_displacement_y = y + (height / 2.);
-  // TODO read this from somewhere
-  float player_hp_perc = width * ((float) hp / MAX_HP);
+  float fullBarDisplacementY;
+  float playerPercHP;
+
+  /* init vars */
+  fullBarDisplacementY = y + (height / 2.);
+  playerPercHP = width * (hp / MAX_HP);
+
   /* color change won't work if textures are enabled */
   glDisable(GL_TEXTURE_2D);
 
-  /* treat the next four vertices as a quadrilateral */
+  /* set line width */
   glLineWidth(height);
+
+  /* draw health bar inner line */
   glBegin(GL_LINE_STRIP);
 
   /* set the current color */
-  glColor3f(1.0, 0.0, 0.0);
+  if (hp > HIGH_HEALTH_MARK)
+    glColor3fv(Colors::green);
+  else if (hp < LOW_HEALTH_MARK)
+    glColor3fv(Colors::red);
+  else
+    glColor3fv(Colors::orange);
 
   /* set the vertex data */
-  glVertex2f(x, full_bar_displacement_y);
-  glVertex2f(x + player_hp_perc, full_bar_displacement_y);
+  glVertex2f(x, fullBarDisplacementY);
+  glVertex2f(x + playerPercHP, fullBarDisplacementY);
 
   /* finish drawing the health bar */
   glEnd();
 
+  /* set line width */
   glLineWidth(height / 5.);
+
+  /* draw health bar outline */
   glBegin(GL_LINE_STRIP);
 
   /* set the current color */
-  glColor3f(1.0, 0.0, 0.0);
+  if (isAlly)
+    glColor3fv(Colors::white);
+  else
+    glColor3fv(Colors::black);
 
   /* set the vertex data */
   glVertex2f(x, y);
   glVertex2f(x + width, y);
   glVertex2f(x + width, y + height);
   glVertex2f(x, y + height);
+  glVertex2f(x, y);
 
   /* finish drawing the outline of the health bar */
   glEnd();
-
-  
 
   /* re-enable textures */
   glEnable(GL_TEXTURE_2D);
@@ -98,18 +122,37 @@ void GL::drawRect(float x, float y, float width, float height, int hp)
 void glXSwapBuffers(Display *dpy, GLXDrawable drawable)
 {
   glXSwapBuffersPtr fptr;
+  float x, y;
+  int i;
 
+  /* get initial x, y values */
+  x = GL::viewport[2] - HEALTHBAR_WIDTH - HEALTHBAR_PADDING;
+  y = 150.f;
+
+  /* save current state and do GL setup */
   GL::setupOrtho();
-  // TODO figure these out based on the window size
-  int cur_y = 100;
-  float width = 75.f;
-  float height = 10.f;
-  for (int i = 0; i < num_players; i++) {
-    GL::drawRect(100, cur_y, width, height, player_hps[i]);
-    cur_y += height * 2;
+
+  /* draw ally hp bars */
+  for (i = 0; i < numPlayersPerTeam; i++) {
+    GL::drawHealthBar(x, y, HEALTHBAR_WIDTH, HEALTHBAR_HEIGHT,
+                      allyHPs[i], /* isAlly */ true);
+    y += HEALTHBAR_PADDING * 2;
   }
+
+  /* add a small gap for better visuals */
+  y += HEALTHBAR_PADDING * 2;
+
+  /* draw enemy hp bars */
+  for (i = 0; i < numPlayersPerTeam; i++) {
+    GL::drawHealthBar(x, y, HEALTHBAR_WIDTH, HEALTHBAR_HEIGHT,
+                      enemyHPs[i], /* isAlly */ false);
+    y += HEALTHBAR_PADDING * 2;
+  }
+
+  /* restore saved GL state */
   GL::restoreGL();
 
+  /* call the hooked function */
   fptr = (glXSwapBuffersPtr)dlsym(RTLD_NEXT, "glXSwapBuffers");
   return fptr(dpy, drawable);
 }

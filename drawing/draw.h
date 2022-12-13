@@ -10,7 +10,7 @@ namespace GL
   void setupOrtho(void);
   void restoreGL(void);
 
-  void drawRect(float x, float y, float width, float height);
+  void drawRect(float x, float y, float width, float height, int hp);
 }
 
 typedef void (*glXSwapBuffersPtr)(Display *, GLXDrawable);

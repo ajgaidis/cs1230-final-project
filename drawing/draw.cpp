@@ -1,5 +1,10 @@
 #include "draw.h"
 
+#define MAX_HP  100.f
+
+int num_players = 2;
+char player_hps[32] = {75, 33};
+
 void GL::setupOrtho(void)
 {
   GLint viewport[4];
@@ -41,21 +46,35 @@ void GL::setupOrtho(void)
   glDisable(GL_DEPTH_TEST);
 }
 
-void GL::restoreGL(void)
-{
-  /* restore the state */
-  glPopMatrix();
+void GL::restoreGL(void) { /* restore the state */ 
+  glPopMatrix(); 
   glPopAttrib();
   glEnable(GL_DEPTH_TEST);
 }
 
-void GL::drawRect(float x, float y, float width, float height)
+void GL::drawRect(float x, float y, float width, float height, int hp)
 {
+  float full_bar_displacement_y = y + (height / 2.);
+  // TODO read this from somewhere
+  float player_hp_perc = width * ((float) hp / MAX_HP);
   /* color change won't work if textures are enabled */
   glDisable(GL_TEXTURE_2D);
 
   /* treat the next four vertices as a quadrilateral */
-  glLineWidth(10.0);
+  glLineWidth(height);
+  glBegin(GL_LINE_STRIP);
+
+  /* set the current color */
+  glColor3f(1.0, 0.0, 0.0);
+
+  /* set the vertex data */
+  glVertex2f(x, full_bar_displacement_y);
+  glVertex2f(x + player_hp_perc, full_bar_displacement_y);
+
+  /* finish drawing the health bar */
+  glEnd();
+
+  glLineWidth(height / 5.);
   glBegin(GL_LINE_STRIP);
 
   /* set the current color */
@@ -67,8 +86,10 @@ void GL::drawRect(float x, float y, float width, float height)
   glVertex2f(x + width, y + height);
   glVertex2f(x, y + height);
 
-  /* finish definiting the quadrilateral */
+  /* finish drawing the outline of the health bar */
   glEnd();
+
+  
 
   /* re-enable textures */
   glEnable(GL_TEXTURE_2D);
@@ -79,7 +100,14 @@ void glXSwapBuffers(Display *dpy, GLXDrawable drawable)
   glXSwapBuffersPtr fptr;
 
   GL::setupOrtho();
-  GL::drawRect(50, 50, 50, 50);
+  // TODO figure these out based on the window size
+  int cur_y = 100;
+  float width = 75.f;
+  float height = 10.f;
+  for (int i = 0; i < num_players; i++) {
+    GL::drawRect(100, cur_y, width, height, player_hps[i]);
+    cur_y += height * 2;
+  }
   GL::restoreGL();
 
   fptr = (glXSwapBuffersPtr)dlsym(RTLD_NEXT, "glXSwapBuffers");

@@ -10,9 +10,10 @@
 #define HEALTHBAR_HEIGHT  10.f
 #define HEALTHBAR_PADDING 10.f
 
-int numPlayersPerTeam = 5;
-float allyHPs[5]  = {75.f, 33.f, 81.f, 5.f, 100.f};
-float enemyHPs[5] = {75.f, 33.f, 81.f, 5.f, 100.f};
+int numAllies = 0;
+int numEnemies = 0;
+int allyHPs[5];
+int enemyHPs[5];
 
 void GL::setupOrtho(void)
 {
@@ -53,8 +54,8 @@ void GL::setupOrtho(void)
   glDisable(GL_DEPTH_TEST);
 }
 
-void GL::restoreGL(void) { /* restore the state */ 
-  glPopMatrix(); 
+void GL::restoreGL(void) { /* restore the state */
+  glPopMatrix();
   glPopAttrib();
   glEnable(GL_DEPTH_TEST);
 }
@@ -133,9 +134,9 @@ void glXSwapBuffers(Display *dpy, GLXDrawable drawable)
   GL::setupOrtho();
 
   /* draw ally hp bars */
-  for (i = 0; i < numPlayersPerTeam; i++) {
+  for (i = 0; i < numAllies; i++) {
     GL::drawHealthBar(x, y, HEALTHBAR_WIDTH, HEALTHBAR_HEIGHT,
-                      allyHPs[i], /* isAlly */ true);
+                      (float) allyHPs[i], /* isAlly */ true);
     y += HEALTHBAR_PADDING * 2;
   }
 
@@ -143,9 +144,9 @@ void glXSwapBuffers(Display *dpy, GLXDrawable drawable)
   y += HEALTHBAR_PADDING * 2;
 
   /* draw enemy hp bars */
-  for (i = 0; i < numPlayersPerTeam; i++) {
+  for (i = 0; i < numEnemies; i++) {
     GL::drawHealthBar(x, y, HEALTHBAR_WIDTH, HEALTHBAR_HEIGHT,
-                      enemyHPs[i], /* isAlly */ false);
+                      (float) enemyHPs[i], /* isAlly */ false);
     y += HEALTHBAR_PADDING * 2;
   }
 

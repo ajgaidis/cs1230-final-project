@@ -118,6 +118,7 @@ uintptr_t local_player_addr;
 struct Entity* local_player;
 
 list_t entities;
+pthread_mutex_t entities_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 /* CLI stuff */
 #define CLI_PROMPT      COLOR_FMT("> ", BRIGHT, FG_BLUE)
@@ -281,62 +282,79 @@ void cleanup_entities()
 
     while (!list_empty(&entities)) {
         entity = list_head(&entities, struct Entity, entity_link);
+        list_remove_head(&entities);
         free(entity);
     }
 }
 
-void set_entities(void)
+void *set_entities(void *arg)
 {
     uintptr_t cur_entity_entry;
     unsigned char buf[PTR_SIZE];
     struct Entity *entity;
     uintptr_t entity_ptr = -1;
 
-    cleanup_entities();
+    pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
 
-    read_from_proc(client_client_base_addr + LOCAL_PLAYER_PTR_OFFSET, buf, PTR_SIZE);
-    local_player_addr = unpack(buf, PTR_SIZE);
-    verbose("Local player at: 0x%" PRIxPTR "\n", local_player_addr);
+    while (1) {
 
-    cur_entity_entry = client_client_base_addr + ENTITYLIST_OFFSET;
-    verbose("entity list address: 0x%" PRIxPTR "\n", cur_entity_entry);
+        pthread_mutex_lock(&entities_mutex);
+        cleanup_entities();
 
-    for (int i  = 0; i <  MAX_PLAYERS; i++) {
-    /* while (entity_ptr) { */
-        read_from_proc(cur_entity_entry + ENTITY_OFFSET, buf, PTR_SIZE);
-        entity_ptr = unpack(buf, sizeof(uintptr_t));
+        read_from_proc(client_client_base_addr + LOCAL_PLAYER_PTR_OFFSET,
+                        buf, PTR_SIZE);
+        local_player_addr = unpack(buf, PTR_SIZE);
+        verbose("Local player at: 0x%" PRIxPTR "\n", local_player_addr);
 
-        if (entity_ptr) {
-            verbose("found entity at: 0x%" PRIxPTR "\n", entity_ptr);
+        cur_entity_entry = client_client_base_addr + ENTITYLIST_OFFSET;
+        verbose("entity list address: 0x%" PRIxPTR "\n", cur_entity_entry);
 
-            entity = get_new_entity();
-            entity->base = entity_ptr;
-            entity->health = get_entity_int_field(entity, ENT_HEALTH_OFFSET);
-            entity->team = get_entity_int_field(entity, ENT_TEAM_OFFSET);
-            list_insert_head(&entities, &entity->entity_link);
+        for (int i  = 0; i <  MAX_PLAYERS; i++) {
+        /* while (entity_ptr) { */
+            read_from_proc(cur_entity_entry + ENTITY_OFFSET, buf, PTR_SIZE);
+            entity_ptr = unpack(buf, sizeof(uintptr_t));
 
-            if (entity_ptr == local_player_addr) {
-                local_player =  entity;
+            if (entity_ptr) {
+                verbose("found entity at: 0x%" PRIxPTR "\n", entity_ptr);
+
+                entity = get_new_entity();
+                entity->base = entity_ptr;
+                entity->health = get_entity_int_field(entity, ENT_HEALTH_OFFSET);
+                entity->team = get_entity_int_field(entity, ENT_TEAM_OFFSET);
+                list_insert_head(&entities, &entity->entity_link);
+
+                if (entity_ptr == local_player_addr) {
+                    local_player =  entity;
+                }
+                print_entity(entity);
             }
-            print_entity(entity);
-        }
 
-        cur_entity_entry += ENTITY_LIST_ITEM_SIZE;
+            cur_entity_entry += ENTITY_LIST_ITEM_SIZE;
+        }
+        pthread_mutex_unlock(&entities_mutex);
+
+        /* sleep for 10 seconds */
+        sleep(10);
     }
 }
 
 struct Entity *get_glow_entry_entity(struct GlowObjectDefinition_t *glow_obj)
 {
     struct Entity *entity;
+    struct Entity *ret = NULL;
 
+    pthread_mutex_lock(&entities_mutex);
     list_iterate_begin(&entities, entity, struct Entity, entity_link) {
 
-        if (entity->base == glow_obj->m_pEntity)
-            return entity;
+        if (entity->base == glow_obj->m_pEntity) {
+            ret = entity;
+            break;
+        }
 
     } list_iterate_end();
+    pthread_mutex_unlock(&entities_mutex);
 
-    return NULL;
+    return ret;
 }
 
 void cleanup_glows(void *data)
@@ -472,6 +490,7 @@ void *write_healthbars(void *data)
         nenemies = 0;
         cur_teammate_hp = teammates_hps_addr;
         cur_enemy_hp = enemies_hps_addr;
+        pthread_mutex_lock(&entities_mutex);
         list_iterate_begin(&entities, entity, struct Entity, entity_link) {
             /* Update health */
             memset(buf, 0, PTR_SIZE);
@@ -488,6 +507,7 @@ void *write_healthbars(void *data)
                 nenemies++;
             }
         } list_iterate_end();
+        pthread_mutex_unlock(&entities_mutex);
         write_to_proc(num_teammates_addr, &nteammates, sizeof(int));
         write_to_proc(num_enemies_addr, &nenemies, sizeof(int));
     }
@@ -694,6 +714,7 @@ int main(int argc, char *argv[])
     rl_bind_key('\t', rl_complete);
     char cmd[LINE_MAX];
     int num_cmds, ret, i;
+    pthread_t entities_thr;
 
     /* init entity list */
     list_init(&entities);
@@ -705,8 +726,11 @@ int main(int argc, char *argv[])
                              CLI_BASE_CMD_LEN,  &client_client_base_addr);
     set_shared_lib_base_addr(DRAW_LIB_NAME, DRAW_BASE_CMD_FMT,
                              DRAW_BASE_CMD_LEN, &draw_base_addr);
-    set_entities();
     set_glow_info();
+
+    /* start entity fetching thread */
+    pthread_create(&entities_thr, NULL, &set_entities, NULL);
+    pthread_detach(entities_thr);
 
     /* get number of CLI commands */
     num_cmds = sizeof(cmd_table) / sizeof(struct cli_cmd);
@@ -753,5 +777,10 @@ int main(int argc, char *argv[])
     }
 
     cli(CLI_GOODBYE_MSG);
+
+    /* cleanup */
+    pthread_mutex_destroy(&entities_mutex);
+    pthread_cancel(entities_thr);
+
     exit(EXIT_SUCCESS);
 }

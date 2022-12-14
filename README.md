@@ -1,6 +1,24 @@
 # cs1230-final-project
 Alexander Gaidis and Neophytos Christou's final project for Brown University's CS 1230: Introduction to Computer Graphics.
 
+# How to use 
+
+Note: the hacks were only tested on 64-bit Debian 11. They won't work in any non 64-bit Linux OSes, and might not even work on other distros, since we rely on hardcoded offsets.
+
+## Compilation
+
+The main wallhack binary and the shared library to be preloaded can be compiled using the provided Makefiles in `wall-hack` and `drawing`.
+
+## Preloading the shared library
+
+The produced shared object (`drawing/libdraw.so`) needs to be preloaded into the CSGO binary. To do this, right click on `Counter-Strike: Global Offensive` in the Steam library, click `Properties` -> `General` and type the following under `LAUNCH OPTIONS`: `LD_PRELOAD="$LD_PRELOAD=/path/to/libdraw.so" %command%`, replacing the path with the full path to the compiled shared library.
+
+## Using the hacks
+
+After a game has loaded, run the `main` binary under `wall-hack`. The program will expose a command line which can be used to turn the hacks on and off by typing the hack's identifier followed by `1` to turn it on or `0` to turn it off. The three supported hacks are `glow`, `wireframe` and `healthbars` (i.e., type `glow 1` to turn on the glows, and so on).
+
+# Proposal
+
 We are very interested in offensive and defensive software security, and thus we would like to explore its intersection with graphics. Specifically, we plan to hack the game client of a first-person shooter (FPS) so the player is able to see enemies through walls (i.e., "wall hacks") and, if time permits, replace the textures of players with colors to easily identify teammates and enemies (i.e., "cham hacks" or "chameleon hacks"). 
 
 Many games utilize API calls to local graphics libraries such as OpenGL (https://www.pcgamingwiki.com/wiki/List_of_OpenGL_games) to handle rendering of objects and players. Our job in this project would be: (1) reverse engineer the game client to discover what calls are made to OpenGL and how they are used to render players and other objects, (2) write software that hooks these API function calls, allowing us to interpose on their functionality at run time, and (3) write code that runs at our installed hooks that manipulates the rendering of the player's screen to achieve the desired hack.

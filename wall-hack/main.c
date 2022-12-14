@@ -39,13 +39,13 @@
 #define MAX_CMD_LEN             0x100
 
 /* one-byte wall-hack offsets */
-#define INSN_OFFSET             0x7f1463
+#define INSN_OFFSET             0x7f1683
 #define INSN_OPERAND_OFFSET     0x2
 
 /* for glow wall-hack */
-#define GLOWOBJMGR_OFFSET       0x2b9cf80
-#define ENTITYLIST_OFFSET       0x232e7d8
-#define LOCAL_PLAYER_PTR_OFFSET 0x22fd128
+#define GLOWOBJMGR_OFFSET       0x2b9cf80 + (16 * 1024)
+#define ENTITYLIST_OFFSET       0x232e7d8 + (16 * 1024)
+#define LOCAL_PLAYER_PTR_OFFSET 0x22fd128 + (16 * 1024)
 #define GLOWOBJDEF_SIZE         64
 #define ENTITY_LIST_ITEM_SIZE   32
 #define ENTITY_OFFSET           16
@@ -296,7 +296,7 @@ void *set_entities(void *arg)
 
     pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
 
-    while (1) {
+    /* while (1) { */
 
         pthread_mutex_lock(&entities_mutex);
         cleanup_entities();
@@ -334,8 +334,9 @@ void *set_entities(void *arg)
         pthread_mutex_unlock(&entities_mutex);
 
         /* sleep for 10 seconds */
-        sleep(10);
-    }
+        /* sleep(12000); */
+    /* } */
+        pthread_exit(NULL);
 }
 
 struct Entity *get_glow_entry_entity(struct GlowObjectDefinition_t *glow_obj)

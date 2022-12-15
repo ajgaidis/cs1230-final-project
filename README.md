@@ -17,6 +17,10 @@ The produced shared object (`drawing/libdraw.so`) needs to be preloaded into the
 
 After a game has loaded, run the `main` binary under `wall-hack`. The program will expose a command line which can be used to turn the hacks on and off by typing the hack's identifier followed by `1` to turn it on or `0` to turn it off. The three supported hacks are `glow`, `wireframe` and `healthbars` (i.e., type `glow 1` to turn on the glows, and so on).
 
+## Other notes
+
+The file `wall-hack/list.h` implements a linked-list in C. This file was used verbatim from some of the stencil code we received in cs1680 (i.e., we did not write it).
+
 # Proposal
 
 We are very interested in offensive and defensive software security, and thus we would like to explore its intersection with graphics. Specifically, we plan to hack the game client of a first-person shooter (FPS) so the player is able to see enemies through walls (i.e., "wall hacks") and, if time permits, replace the textures of players with colors to easily identify teammates and enemies (i.e., "cham hacks" or "chameleon hacks"). 
